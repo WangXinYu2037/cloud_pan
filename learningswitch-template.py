@@ -149,6 +149,28 @@ class LearningSwitch (object):
         drop() # 2a
         return
 
+    if packet.dst.is_multicast:
+      flood()
+      return
+    
+    if packet.dst not in self.macToPort:
+      flood("Not found in table")
+      return
+    
+    dst_port = self.macToPort[packet.dst]
+    if dst_port == event.port:
+      drop()
+      return
+
+    msg = of.ofp_flow_mod()
+    msg.match = of.ofp_match.from_packet(packet)
+    msg.match.in_port = event.port
+    msg.idle_timeout = 10
+    msg.hard_timeout = 20
+    msg.actions.append(of.ofp_action_output(port = dst_port))
+    msg.data = event.ofp
+    
+    self.connection.send(msg)
     """
     The learning switch logic goes here.
     """
